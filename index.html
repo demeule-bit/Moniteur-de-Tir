@@ -157,6 +157,15 @@
   .done-btn{width:100%;margin-top:18px;border:none;background:var(--surface);color:var(--text);font-family:var(--disp);letter-spacing:.12em;text-transform:uppercase;font-weight:600;font-size:13px;padding:15px;border-radius:13px;cursor:pointer;}
   .hint{font-size:11.5px;color:var(--faint);line-height:1.5;margin-top:14px;}
   .footnote{margin-top:26px;font-size:11px;color:var(--faint);line-height:1.55;text-align:center;}
+  .linkbtn{appearance:none;border:1px solid var(--red);background:transparent;color:var(--red);font-family:var(--disp);text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:600;padding:9px 14px;border-radius:10px;cursor:pointer;flex:none;}
+  .linkbtn:active{background:var(--red);color:#fff;}
+  #qrModal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:24px;}
+  #qrModal.show{display:flex;animation:fade .2s ease both;}
+  .qr-sheet{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 22px 24px;text-align:center;}
+  .qr-card{background:#fff;border-radius:14px;padding:16px;margin:6px auto 14px;width:min(74vw,260px);height:min(74vw,260px);}
+  .qr-card svg{width:100%;height:100%;display:block;}
+  .qr-scan{font-family:var(--disp);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .qr-url{font-family:var(--mono);font-size:11px;color:var(--faint);word-break:break-all;margin-bottom:4px;}
 </style>
 </head>
 <body>
@@ -200,7 +209,8 @@
   <div class="sheet">
     <h2 data-i18n="setTitle">Réglages</h2>
     <div class="row"><div class="rl"><span data-i18n="voiceLabel"></span><small data-i18n="voiceSub"></small></div><div class="toggle on" id="tgVoice"></div></div>
-    <div class="row"><div class="rl"><span data-i18n="beepLabel"></span><small data-i18n="beepSub"></small></div><div class="toggle on" id="tgBeep"></div></div>
+    <div class="row"><div class="rl"><span data-i18n="cueLabel"></span><small data-i18n="cueSub"></small></div>
+      <div class="seg" id="segCue"><button data-c="none" data-i18n="cueNone"></button><button data-c="beep" class="on" data-i18n="cueBeep"></button><button data-c="voice" data-i18n="cueVoice"></button></div></div>
     <div class="row"><div class="rl"><span data-i18n="safetyLabel"></span><small data-i18n="safetySub"></small></div><div class="toggle on" id="tgSafety"></div></div>
     <div class="row"><div class="rl"><span data-i18n="langLabel"></span></div>
       <div class="seg" id="segLang"><button data-l="fr" class="on">FR</button><button data-l="de">DE</button><button data-l="en">EN</button></div></div>
@@ -212,13 +222,27 @@
       <div class="cal-status" id="calStatus" data-i18n="calStatusDefault"></div>
       <div class="hint" data-i18n="listenHint"></div>
     </div>
+    <div class="row"><div class="rl"><span data-i18n="shareLabel"></span><small data-i18n="shareSub"></small></div>
+      <button class="linkbtn" id="shareBtn" data-i18n="shareBtn"></button></div>
     <button class="done-btn" id="modalDone" data-i18n="doneBtn"></button>
     <div class="hint" data-i18n="iphoneHint"></div>
   </div>
 </div>
 
+<div id="qrModal">
+  <div class="qr-sheet">
+    <h2 data-i18n="shareTitle"></h2>
+    <div class="qr-card" id="qrHolder"></div>
+    <div class="qr-scan" data-i18n="shareScan"></div>
+    <div class="qr-url" id="qrUrl"></div>
+    <button class="done-btn" id="qrClose" data-i18n="doneBtn"></button>
+  </div>
+</div>
+
 <script>
 "use strict";
+const APP_URL="https://demeule-bit.github.io/Moniteur-de-Tir/";
+const QR_SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" shape-rendering="crispEdges"><rect width="37" height="37" fill="#fff"/><g fill="#000"><rect x="4" y="4" width="7" height="1"/><rect x="12" y="4" width="1" height="1"/><rect x="15" y="4" width="3" height="1"/><rect x="21" y="4" width="1" height="1"/><rect x="26" y="4" width="7" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="12" y="5" width="3" height="1"/><rect x="16" y="5" width="1" height="1"/><rect x="18" y="5" width="1" height="1"/><rect x="20" y="5" width="1" height="1"/><rect x="22" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="26" y="5" width="1" height="1"/><rect x="32" y="5" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="6" y="6" width="3" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="14" y="6" width="4" height="1"/><rect x="19" y="6" width="1" height="1"/><rect x="21" y="6" width="4" height="1"/><rect x="26" y="6" width="1" height="1"/><rect x="28" y="6" width="3" height="1"/><rect x="32" y="6" width="1" height="1"/><rect x="4" y="7" width="1" height="1"/><rect x="6" y="7" width="3" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="14" y="7" width="1" height="1"/><rect x="17" y="7" width="2" height="1"/><rect x="21" y="7" width="3" height="1"/><rect x="26" y="7" width="1" height="1"/><rect x="28" y="7" width="3" height="1"/><rect x="32" y="7" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="6" y="8" width="3" height="1"/><rect x="10" y="8" width="1" height="1"/><rect x="12" y="8" width="4" height="1"/><rect x="17" y="8" width="1" height="1"/><rect x="22" y="8" width="1" height="1"/><rect x="26" y="8" width="1" height="1"/><rect x="28" y="8" width="3" height="1"/><rect x="32" y="8" width="1" height="1"/><rect x="4" y="9" width="1" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="17" y="9" width="1" height="1"/><rect x="24" y="9" width="1" height="1"/><rect x="26" y="9" width="1" height="1"/><rect x="32" y="9" width="1" height="1"/><rect x="4" y="10" width="7" height="1"/><rect x="12" y="10" width="1" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="16" y="10" width="1" height="1"/><rect x="18" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/><rect x="22" y="10" width="1" height="1"/><rect x="24" y="10" width="1" height="1"/><rect x="26" y="10" width="7" height="1"/><rect x="12" y="11" width="1" height="1"/><rect x="14" y="11" width="3" height="1"/><rect x="20" y="11" width="1" height="1"/><rect x="23" y="11" width="2" height="1"/><rect x="4" y="12" width="3" height="1"/><rect x="9" y="12" width="2" height="1"/><rect x="12" y="12" width="3" height="1"/><rect x="18" y="12" width="2" height="1"/><rect x="23" y="12" width="6" height="1"/><rect x="31" y="12" width="2" height="1"/><rect x="6" y="13" width="4" height="1"/><rect x="11" y="13" width="1" height="1"/><rect x="13" y="13" width="2" height="1"/><rect x="17" y="13" width="1" height="1"/><rect x="19" y="13" width="2" height="1"/><rect x="22" y="13" width="6" height="1"/><rect x="31" y="13" width="2" height="1"/><rect x="4" y="14" width="1" height="1"/><rect x="8" y="14" width="1" height="1"/><rect x="10" y="14" width="2" height="1"/><rect x="15" y="14" width="1" height="1"/><rect x="17" y="14" width="1" height="1"/><rect x="19" y="14" width="1" height="1"/><rect x="21" y="14" width="1" height="1"/><rect x="23" y="14" width="2" height="1"/><rect x="26" y="14" width="1" height="1"/><rect x="28" y="14" width="3" height="1"/><rect x="32" y="14" width="1" height="1"/><rect x="4" y="15" width="2" height="1"/><rect x="7" y="15" width="2" height="1"/><rect x="11" y="15" width="1" height="1"/><rect x="13" y="15" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="22" y="15" width="4" height="1"/><rect x="27" y="15" width="1" height="1"/><rect x="29" y="15" width="1" height="1"/><rect x="4" y="16" width="2" height="1"/><rect x="7" y="16" width="5" height="1"/><rect x="13" y="16" width="1" height="1"/><rect x="15" y="16" width="2" height="1"/><rect x="20" y="16" width="1" height="1"/><rect x="24" y="16" width="1" height="1"/><rect x="26" y="16" width="2" height="1"/><rect x="32" y="16" width="1" height="1"/><rect x="5" y="17" width="1" height="1"/><rect x="7" y="17" width="3" height="1"/><rect x="12" y="17" width="2" height="1"/><rect x="16" y="17" width="1" height="1"/><rect x="19" y="17" width="2" height="1"/><rect x="23" y="17" width="1" height="1"/><rect x="26" y="17" width="2" height="1"/><rect x="31" y="17" width="2" height="1"/><rect x="4" y="18" width="1" height="1"/><rect x="6" y="18" width="1" height="1"/><rect x="8" y="18" width="1" height="1"/><rect x="10" y="18" width="1" height="1"/><rect x="12" y="18" width="1" height="1"/><rect x="14" y="18" width="1" height="1"/><rect x="16" y="18" width="2" height="1"/><rect x="19" y="18" width="2" height="1"/><rect x="22" y="18" width="3" height="1"/><rect x="28" y="18" width="1" height="1"/><rect x="32" y="18" width="1" height="1"/><rect x="6" y="19" width="2" height="1"/><rect x="11" y="19" width="1" height="1"/><rect x="13" y="19" width="1" height="1"/><rect x="15" y="19" width="2" height="1"/><rect x="19" y="19" width="2" height="1"/><rect x="24" y="19" width="1" height="1"/><rect x="27" y="19" width="2" height="1"/><rect x="4" y="20" width="8" height="1"/><rect x="13" y="20" width="2" height="1"/><rect x="16" y="20" width="1" height="1"/><rect x="20" y="20" width="1" height="1"/><rect x="22" y="20" width="2" height="1"/><rect x="26" y="20" width="2" height="1"/><rect x="32" y="20" width="1" height="1"/><rect x="9" y="21" width="1" height="1"/><rect x="11" y="21" width="1" height="1"/><rect x="13" y="21" width="1" height="1"/><rect x="19" y="21" width="3" height="1"/><rect x="23" y="21" width="2" height="1"/><rect x="26" y="21" width="2" height="1"/><rect x="30" y="21" width="3" height="1"/><rect x="4" y="22" width="7" height="1"/><rect x="13" y="22" width="1" height="1"/><rect x="15" y="22" width="1" height="1"/><rect x="17" y="22" width="1" height="1"/><rect x="19" y="22" width="1" height="1"/><rect x="23" y="22" width="1" height="1"/><rect x="26" y="22" width="1" height="1"/><rect x="28" y="22" width="2" height="1"/><rect x="32" y="22" width="1" height="1"/><rect x="8" y="23" width="2" height="1"/><rect x="11" y="23" width="2" height="1"/><rect x="15" y="23" width="2" height="1"/><rect x="18" y="23" width="3" height="1"/><rect x="25" y="23" width="1" height="1"/><rect x="27" y="23" width="1" height="1"/><rect x="4" y="24" width="5" height="1"/><rect x="10" y="24" width="1" height="1"/><rect x="16" y="24" width="1" height="1"/><rect x="18" y="24" width="1" height="1"/><rect x="20" y="24" width="1" height="1"/><rect x="24" y="24" width="6" height="1"/><rect x="31" y="24" width="1" height="1"/><rect x="12" y="25" width="4" height="1"/><rect x="17" y="25" width="1" height="1"/><rect x="19" y="25" width="3" height="1"/><rect x="24" y="25" width="1" height="1"/><rect x="28" y="25" width="3" height="1"/><rect x="32" y="25" width="1" height="1"/><rect x="4" y="26" width="7" height="1"/><rect x="13" y="26" width="1" height="1"/><rect x="15" y="26" width="3" height="1"/><rect x="19" y="26" width="1" height="1"/><rect x="21" y="26" width="2" height="1"/><rect x="24" y="26" width="1" height="1"/><rect x="26" y="26" width="1" height="1"/><rect x="28" y="26" width="1" height="1"/><rect x="32" y="26" width="1" height="1"/><rect x="4" y="27" width="1" height="1"/><rect x="10" y="27" width="1" height="1"/><rect x="12" y="27" width="2" height="1"/><rect x="15" y="27" width="1" height="1"/><rect x="18" y="27" width="1" height="1"/><rect x="20" y="27" width="1" height="1"/><rect x="22" y="27" width="3" height="1"/><rect x="28" y="27" width="1" height="1"/><rect x="32" y="27" width="1" height="1"/><rect x="4" y="28" width="1" height="1"/><rect x="6" y="28" width="3" height="1"/><rect x="10" y="28" width="1" height="1"/><rect x="14" y="28" width="2" height="1"/><rect x="17" y="28" width="1" height="1"/><rect x="20" y="28" width="1" height="1"/><rect x="23" y="28" width="7" height="1"/><rect x="4" y="29" width="1" height="1"/><rect x="6" y="29" width="3" height="1"/><rect x="10" y="29" width="1" height="1"/><rect x="13" y="29" width="4" height="1"/><rect x="18" y="29" width="1" height="1"/><rect x="20" y="29" width="2" height="1"/><rect x="24" y="29" width="1" height="1"/><rect x="28" y="29" width="3" height="1"/><rect x="32" y="29" width="1" height="1"/><rect x="4" y="30" width="1" height="1"/><rect x="6" y="30" width="3" height="1"/><rect x="10" y="30" width="1" height="1"/><rect x="12" y="30" width="2" height="1"/><rect x="15" y="30" width="1" height="1"/><rect x="17" y="30" width="1" height="1"/><rect x="19" y="30" width="1" height="1"/><rect x="23" y="30" width="3" height="1"/><rect x="28" y="30" width="1" height="1"/><rect x="31" y="30" width="2" height="1"/><rect x="4" y="31" width="1" height="1"/><rect x="10" y="31" width="1" height="1"/><rect x="12" y="31" width="1" height="1"/><rect x="14" y="31" width="1" height="1"/><rect x="19" y="31" width="2" height="1"/><rect x="22" y="31" width="1" height="1"/><rect x="24" y="31" width="3" height="1"/><rect x="29" y="31" width="1" height="1"/><rect x="4" y="32" width="7" height="1"/><rect x="12" y="32" width="2" height="1"/><rect x="16" y="32" width="1" height="1"/><rect x="20" y="32" width="1" height="1"/><rect x="22" y="32" width="1" height="1"/><rect x="24" y="32" width="1" height="1"/><rect x="26" y="32" width="1" height="1"/><rect x="28" y="32" width="2" height="1"/><rect x="32" y="32" width="1" height="1"/></g></svg>`;
 
 const WEAPON = {
   rifle:{fr:"Fusil d'assaut 90/57 — couché, sur bipied", de:"Sturmgewehr 90/57 — liegend, auf Zweibein", en:"Assault rifle 90/57 — prone, on bipod"},
@@ -373,7 +397,9 @@ const UI = {
     exercises:"exercices", tagShots:"coups", tagTarget:"cible", tagPrecision:"précision · sans chrono",
     footnote:"Conforme à la fiche FST « Exercices fédéraux » (08.06.2022) et au Règlement TFC F300/P25-50 (éd. 2022). Outil d'entraînement — les directives officielles en vigueur font foi.",
     setTitle:"Réglages", voiceLabel:"Voix du moniteur", voiceSub:"Annonce les commandes à voix haute",
-    beepLabel:"Signaux sonores", beepSub:"Bips au départ et à la fin", safetyLabel:"Commandes de sécurité",
+    beepLabel:"Signaux sonores", beepSub:"Bips au départ et à la fin",
+    cueLabel:"Signal du chronomètre", cueSub:"Bips, ou annonces vocales du temps", cueNone:"Aucun", cueBeep:"Bips", cueVoice:"Voix",
+    shareLabel:"Partager l'application", shareSub:"Afficher un QR code à scanner", shareBtn:"QR code", shareTitle:"Partager", shareScan:"Scannez pour ouvrir l'app", safetyLabel:"Commandes de sécurité",
     safetySub:"« Chargez » au début, « Déchargez » à la fin", langLabel:"Langue de l'application",
     prepLabel:"Temps de préparation", prepUnit:"s avant « Feu libre »", listenLabel:"Détection acoustique des coups",
     listenSub:"Expérimental · compte les coups au micro", calBtn:"🎯 Calibrer mes coups", sensLabel:"Sensibilité",
@@ -396,7 +422,9 @@ const UI = {
     exercises:"Übungen", tagShots:"Schuss", tagTarget:"Scheibe", tagPrecision:"Präzision · ohne Zeit",
     footnote:"Gemäss SSV-Merkblatt « Eidg. Übungen » (08.06.2022) und Reglement Feldschiessen G300/P25-50 (Ausg. 2022). Trainingshilfe — massgebend sind die geltenden offiziellen Weisungen.",
     setTitle:"Einstellungen", voiceLabel:"Stimme des Schützenmeisters", voiceSub:"Sagt die Kommandos laut an",
-    beepLabel:"Tonsignale", beepSub:"Pieptöne bei Start und Ende", safetyLabel:"Sicherheitskommandos",
+    beepLabel:"Tonsignale", beepSub:"Pieptöne bei Start und Ende",
+    cueLabel:"Countdown-Signal", cueSub:"Pieptöne oder gesprochene Zeit", cueNone:"Kein", cueBeep:"Töne", cueVoice:"Stimme",
+    shareLabel:"App teilen", shareSub:"QR-Code zum Scannen anzeigen", shareBtn:"QR-Code", shareTitle:"Teilen", shareScan:"Scannen, um die App zu öffnen", safetyLabel:"Sicherheitskommandos",
     safetySub:"« Laden » am Anfang, « Entladen » am Ende", langLabel:"App-Sprache",
     prepLabel:"Vorbereitungszeit", prepUnit:"s vor « Feuer frei »", listenLabel:"Akustische Schusserkennung",
     listenSub:"Experimentell · zählt Schüsse per Mikrofon", calBtn:"🎯 Meine Schüsse kalibrieren", sensLabel:"Empfindlichkeit",
@@ -419,7 +447,9 @@ const UI = {
     exercises:"exercises", tagShots:"shots", tagTarget:"target", tagPrecision:"precision · untimed",
     footnote:"Per the SSV/FST « Federal exercises » sheet (08.06.2022) and the Field Shooting R300/P25-50 regulation (2022 ed.). Training aid — the official directives in force prevail.",
     setTitle:"Settings", voiceLabel:"Range officer voice", voiceSub:"Speaks the commands aloud",
-    beepLabel:"Sound signals", beepSub:"Beeps at start and end", safetyLabel:"Safety commands",
+    beepLabel:"Sound signals", beepSub:"Beeps at start and end",
+    cueLabel:"Countdown signal", cueSub:"Beeps, or spoken time cues", cueNone:"None", cueBeep:"Beeps", cueVoice:"Voice",
+    shareLabel:"Share the app", shareSub:"Show a QR code to scan", shareBtn:"QR code", shareTitle:"Share", shareScan:"Scan to open the app", safetyLabel:"Safety commands",
     safetySub:"'Load' at the start, 'Unload' at the end", langLabel:"App language",
     prepLabel:"Preparation time", prepUnit:'s before "Free fire"', listenLabel:"Acoustic shot detection",
     listenSub:"Experimental · counts shots via mic", calBtn:"🎯 Calibrate my shots", sensLabel:"Sensitivity",
@@ -445,7 +475,7 @@ const weaponOf=info=>info.weapon[settings.lang];
 const labelOf=p=>p.label[settings.lang];
 
 /* ============ état & réglages ============ */
-const settings={ voice:true, beep:true, safety:true, lang:"fr", prep:7, listen:false, sensitivity:1.0, calibrated:false, calBase:0.4 };
+const settings={ voice:true, cue:"beep", safety:true, lang:"fr", prep:7, listen:false, sensitivity:1.0, calibrated:false, calBase:0.4 };
 let nav={mode:null,dist:null}, queue=[], qIndex=0;
 const $=s=>document.querySelector(s);
 const main=$("#main"), backBtn=$("#backBtn"), calStatus=$("#calStatus");
@@ -504,8 +534,12 @@ function renderProgram(mode,dist){
 
 /* ============ AUDIO ============ */
 let audioCtx=null;
-function initAudio(){ if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume(); }
-function beep(f=880,d=.12,v=.5,t="square"){ if(!settings.beep||!audioCtx)return; try{ const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+function setAudioSession(t){ try{ if(navigator.audioSession) navigator.audioSession.type=t; }catch(e){} }
+function initAudio(){ setAudioSession("playback");   // jouer même si l'iPhone est en silencieux
+  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(audioCtx){ if(audioCtx.state==="suspended")audioCtx.resume();
+    try{ const b=audioCtx.createBuffer(1,1,22050),src=audioCtx.createBufferSource(); src.buffer=b; src.connect(audioCtx.destination); src.start(0); }catch(e){} } }
+function beep(f=880,d=.12,v=.5,t="square"){ if(settings.cue!=="beep"||!audioCtx)return; try{ if(audioCtx.state==="suspended")audioCtx.resume(); const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+d);
   o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+d);}catch(e){} }
 const tickBeep=()=>beep(660,.07,.35,"sine");
@@ -524,6 +558,16 @@ function say(text){ if(!settings.voice||!("speechSynthesis" in window)||!text)re
   const v=voices[settings.lang]; if(v)u.voice=v; u.rate=1;u.pitch=1; speechSynthesis.speak(u);}catch(e){} }
 function primeVoice(){ if(!("speechSynthesis" in window))return; try{ const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u);}catch(e){} }
 
+/* ============ ANNONCES VOCALES DU DÉCOMPTE ============ */
+const CUE={ fr:{m3:"3 minutes",sec:n=>`${n} secondes`}, de:{m3:"3 Minuten",sec:n=>`${n} Sekunden`}, en:{m3:"3 minutes",sec:n=>`${n} seconds`} };
+function speakCue(text){ if(!("speechSynthesis" in window)||!text)return; try{ const u=new SpeechSynthesisUtterance(text);
+  u.lang=settings.lang==="fr"?"fr-FR":settings.lang==="de"?"de-CH":"en-GB"; const v=voices[settings.lang]; if(v)u.voice=v; u.rate=1;u.pitch=1; speechSynthesis.speak(u); }catch(e){} }
+/* rem = secondes restantes (entier). total = durée de la série. Annonce une fois par seuil. */
+function cueTick(rem,total,said){ if(rem<=0||said[rem])return; const L=CUE[settings.lang];
+  if(rem===180&&total>180){ said[rem]=1; speakCue(L.m3); return; }
+  if((rem===30||rem===20||rem===10)&&total>rem){ said[rem]=1; speakCue(L.sec(rem)); return; }
+  if(rem>=1&&rem<=5){ said[rem]=1; speakCue(String(total-rem)); } }   // 5 dernières s : compte écoulé (ex. 55,56,57,58,59)
+
 /* ============ WAKE LOCK ============ */
 let wakeLock=null;
 async function lockScreen(){ try{ if("wakeLock" in navigator) wakeLock=await navigator.wakeLock.request("screen"); }catch(e){} }
@@ -533,7 +577,8 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 /* ============ DÉTECTION ACOUSTIQUE ============ */
 const Mic={ stream:null, analyser:null, data:null, raf:null, running:false, onShot:null, lastShot:0, threshold:.4, level:0,
   async start(){ if(this.running)return true; if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return false;
-    try{ this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});}catch(e){return false;}
+    setAudioSession("play-and-record");
+    try{ this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});}catch(e){setAudioSession("playback");return false;}
     initAudio(); if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     const src=audioCtx.createMediaStreamSource(this.stream); this.analyser=audioCtx.createAnalyser(); this.analyser.fftSize=1024;
     this.data=new Float32Array(this.analyser.fftSize); src.connect(this.analyser); this.running=true; this.loop(); return true; },
@@ -542,7 +587,7 @@ const Mic={ stream:null, analyser:null, data:null, raf:null, running:false, onSh
     if(micFill){ micFill.style.width=Math.min(100,peak*100)+"%"; micFill.style.background=peak>=this.threshold?"var(--red)":"var(--green)"; }
     const now=performance.now(); if(peak>=this.threshold&&(now-this.lastShot)>170){ this.lastShot=now; if(this.onShot)this.onShot(peak); }
     this.raf=requestAnimationFrame(()=>this.loop()); },
-  stop(){ this.running=false; if(this.raf)cancelAnimationFrame(this.raf); this.onShot=null; if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null;} } };
+  stop(){ this.running=false; if(this.raf)cancelAnimationFrame(this.raf); this.onShot=null; if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null;} setAudioSession("playback"); } };
 function effThreshold(){ return Math.min(.97,Math.max(.08,settings.calBase/settings.sensitivity)); }
 
 /* =========================================================
@@ -639,7 +684,8 @@ function prepareSeries(segIndex,first){ const ex=drill.ex, s=ex.series[segIndex]
 function fireSeries(segIndex){ const ex=drill.ex, s=ex.series[segIndex], L=say0();
   goBeep(); showFlash(ui().flashFire,"var(--green)"); say(L.fire); setPhase(ui().fireRun,"var(--red)"); bigSub.textContent=ui().remaining;
   let paused=false; const draw=()=>setCtrl([{label:paused?ui().resume:ui().pause,cls:"ghost",fn:()=>{paused=!paused;if(paused)pauseTimer();else resumeTimer();draw();}}]); draw();
-  startCountdown(s.seconds,{onTick:sh=>{if(sh<=3&&sh>0)tickBeep();},onDone:()=>endSeries(segIndex)}); }
+  const total=s.seconds, said={};
+  startCountdown(total,{onTick:sh=>{ if(settings.cue==="beep"){ if(sh<=3&&sh>0)tickBeep(); } else if(settings.cue==="voice"){ cueTick(sh,total,said); } },onDone:()=>endSeries(segIndex)}); }
 function endSeries(segIndex){ const ex=drill.ex, L=say0(); haltBeep(); showFlash(ui().flashHalt,"var(--red)"); say(L.halt);
   setPhase(ui().halt,"var(--red)"); setRing(0,"var(--red)"); bigTime.textContent="0"; markPips(segIndex+1,false);
   if(segIndex+1<ex.series.length) setCtrl([{label:ui().nextSeries,cls:"go",fn:()=>prepareSeries(segIndex+1,false)}]); else finishExercise(); }
@@ -665,9 +711,15 @@ $("#modalDone").onclick=()=>{ modal.classList.remove("show"); if(!runner.classLi
 modal.onclick=e=>{ if(e.target===modal){ modal.classList.remove("show"); if(!runner.classList.contains("show"))Mic.stop(); } };
 function bindToggle(id,key,after){ const t=$(id); t.classList.toggle("on",settings[key]); t.onclick=()=>{ settings[key]=!settings[key]; t.classList.toggle("on",settings[key]); if(after)after(); }; }
 bindToggle("#tgVoice","voice",()=>{ if(settings.voice)primeVoice(); });
-bindToggle("#tgBeep","beep");
+$("#segCue").querySelectorAll("button").forEach(b=>b.onclick=()=>{ initAudio(); settings.cue=b.dataset.c;
+  $("#segCue").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); });
 bindToggle("#tgSafety","safety");
 bindToggle("#tgListen","listen",()=>{ $("#listenPanel").classList.toggle("show",settings.listen); });
+const qrModal=$("#qrModal");
+$("#qrHolder").innerHTML=QR_SVG; $("#qrUrl").textContent=APP_URL;
+$("#shareBtn").onclick=()=>qrModal.classList.add("show");
+$("#qrClose").onclick=()=>qrModal.classList.remove("show");
+qrModal.onclick=e=>{ if(e.target===qrModal)qrModal.classList.remove("show"); };
 $("#segLang").querySelectorAll("button").forEach(b=>b.onclick=()=>{ settings.lang=b.dataset.l;
   $("#segLang").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); applyI18n(); rerender(); });
 $("#prepRange").oninput=e=>{ settings.prep=+e.target.value; $("#prepVal").textContent=settings.prep; };
@@ -680,6 +732,10 @@ $("#calBtn").onclick=async()=>{ const L=ui(); calStatus.textContent=L.calStartin
     if(n>=3){ Mic.onShot=null; settings.calBase=Math.max(.12,Math.min(...peaks)*0.7); settings.calibrated=true; Mic.stop(); calStatus.textContent=L.calOk; } };
   setTimeout(()=>{ if(Mic.running&&n<3){ Mic.stop(); if(n===0)calStatus.textContent=L.calNone;
     else { settings.calBase=Math.max(.12,Math.min(...peaks)*0.7); settings.calibrated=true; calStatus.textContent=L.calOkN(n); } } },25000); };
+
+function unlockAudioOnce(){ initAudio(); document.removeEventListener("pointerdown",unlockAudioOnce); document.removeEventListener("touchstart",unlockAudioOnce); }
+document.addEventListener("pointerdown",unlockAudioOnce,{passive:true});
+document.addEventListener("touchstart",unlockAudioOnce,{passive:true});
 
 applyI18n();
 renderHome();
