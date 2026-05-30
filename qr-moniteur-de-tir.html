@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR · Moniteur de Tir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{ --bg:#0d0e10; --surface:#191c20; --line:#2a2f36; --text:#f3f4f6; --muted:#9aa1ab; --faint:#6b727c; --red:#e2001a;
+    --disp:'Oswald','Arial Narrow',system-ui,sans-serif; --mono:'SF Mono',ui-monospace,'Roboto Mono',Menlo,monospace;
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;}
+  body{background:radial-gradient(900px 600px at 50% -10%, #1a1d22 0%, transparent 60%), var(--bg);
+    color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;padding:34px 18px 60px;}
+  .poster{width:100%;max-width:430px;background:#fff;color:#0d0e10;border-radius:22px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);}
+  .poster-head{background:var(--red);color:#fff;padding:22px 24px 18px;display:flex;align-items:center;gap:13px;}
+  .mark{width:38px;height:38px;flex:none;}
+  .mark circle{fill:none;stroke-width:3;}
+  .poster-head h1{font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:21px;margin:0;line-height:1.05;}
+  .poster-head p{margin:3px 0 0;font-size:10.5px;letter-spacing:.28em;text-transform:uppercase;opacity:.85;}
+  .qr-area{padding:26px 24px 8px;display:flex;justify-content:center;}
+  #qr{width:280px;height:280px;}
+  #qr svg{width:100%;height:100%;display:block;}
+  .instr{padding:4px 26px 6px;text-align:center;}
+  .instr .l{font-family:var(--disp);text-transform:uppercase;letter-spacing:.13em;font-size:12.5px;color:#0d0e10;font-weight:600;margin:8px 0 2px;}
+  .instr .l span{color:var(--red);}
+  .instr .s{font-size:11px;color:#5b626b;line-height:1.5;}
+  .url{margin:14px 24px 22px;padding:11px 12px;background:#f1f2f4;border:1px solid #e2e4e8;border-radius:10px;
+    font-family:var(--mono);font-size:11.5px;color:#0d0e10;text-align:center;word-break:break-all;}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:26px;width:100%;max-width:430px;}
+  .btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--text);font-family:var(--disp);
+    text-transform:uppercase;letter-spacing:.08em;font-size:13px;font-weight:600;padding:14px 18px;border-radius:12px;cursor:pointer;flex:1;min-width:120px;transition:.16s;}
+  .btn:active{transform:scale(.97);}
+  .btn.primary{background:linear-gradient(180deg,var(--red),#8f1018);border:none;color:#fff;}
+  .note{margin-top:18px;max-width:430px;font-size:11.5px;color:var(--faint);line-height:1.55;text-align:center;}
+  .err{color:var(--red);font-size:13px;text-align:center;max-width:430px;margin-top:16px;line-height:1.5;}
+  @media print{
+    body{background:#fff;padding:0;}
+    .controls,.note{display:none;}
+    .poster{box-shadow:none;max-width:520px;}
+    .poster-head{background:var(--red)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+  <div class="poster">
+    <div class="poster-head">
+      <svg class="mark" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="17" stroke="#fff"/><circle cx="20" cy="20" r="11" stroke="#ffffff" opacity=".7"/>
+        <circle cx="20" cy="20" r="5" stroke="#fff"/><circle cx="20" cy="20" r="1.6" fill="#fff" stroke="none"/>
+      </svg>
+      <div><h1>Moniteur de Tir</h1><p>Exercices fédéraux · FST</p></div>
+    </div>
+    <div class="qr-area"><div id="qr"></div></div>
+    <div class="instr">
+      <div class="l"><span>Scannez</span> pour ouvrir l'app</div>
+      <div class="s">Puis Partager → Sur l'écran d'accueil · Scan to open, then Share → Add to Home Screen</div>
+    </div>
+    <div class="url" id="urlText"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="dlPng">Télécharger PNG</button>
+    <button class="btn" id="dlSvg">Télécharger SVG</button>
+    <button class="btn" id="doPrint">Imprimer</button>
+  </div>
+  <div class="note">PNG pour partage rapide · SVG pour impression nette à toute taille (affiche). Le SVG ne pixelise jamais.</div>
+  <div class="err" id="err" style="display:none"></div>
+
+<script>
+(function(){
+  var URL_ = "https://demeule-bit.github.io/Moniteur-de-Tir/";
+  document.getElementById("urlText").textContent = URL_;
+
+  function fail(msg){ var e=document.getElementById("err"); e.style.display="block"; e.textContent=msg; }
+  if(typeof qrcode === "undefined"){ fail("La bibliothèque QR n'a pas pu se charger — vérifiez la connexion Internet et rechargez la page."); return; }
+
+  // build matrix (error correction level M, auto version)
+  var qr = qrcode(0, "M");
+  qr.addData(URL_);
+  qr.make();
+  var n = qr.getModuleCount();
+  var quiet = 4;                 // zone de silence requise
+  var dim = n + quiet*2;
+  function dark(r,c){ return (r>=0&&r<n&&c>=0&&c<n) ? qr.isDark(r,c) : false; }
+
+  // --- on-screen + downloadable SVG ---
+  function svgString(){
+    var rects="";
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(dark(r,c)) rects+='<rect x="'+(c+quiet)+'" y="'+(r+quiet)+'" width="1" height="1"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+dim+' '+dim+'" shape-rendering="crispEdges">'
+      + '<rect width="'+dim+'" height="'+dim+'" fill="#ffffff"/><g fill="#000000">'+rects+'</g></svg>';
+  }
+  document.getElementById("qr").innerHTML = svgString();
+
+  function download(blob, name){
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  }
+
+  document.getElementById("dlSvg").onclick=function(){
+    download(new Blob([svgString()], {type:"image/svg+xml"}), "moniteur-de-tir-qr.svg");
+  };
+
+  document.getElementById("dlPng").onclick=function(){
+    var scale=Math.max(10, Math.floor(1400/dim));   // ~1400px output
+    var px=dim*scale;
+    var cv=document.createElement("canvas"); cv.width=px; cv.height=px;
+    var ctx=cv.getContext("2d");
+    ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,px,px);
+    ctx.fillStyle="#000000";
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(dark(r,c)) ctx.fillRect((c+quiet)*scale,(r+quiet)*scale,scale,scale);
+    cv.toBlob(function(b){ download(b, "moniteur-de-tir-qr.png"); }, "image/png");
+  };
+
+  document.getElementById("doPrint").onclick=function(){ window.print(); };
+})();
+</script>
+</body>
+</html>
