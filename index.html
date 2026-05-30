@@ -594,7 +594,7 @@ async function beginExercise(){
     if(ok){ micMeter.style.display="block"; micThr.style.left=Math.min(100,Mic.threshold*100)+"%";
       Mic.onShot=()=>{ drill.detected++; tickBeep(); updateCounts(); if(!drill.ex.timed&&drill.detected>=drill.ex.shots)finishExercise(); }; }
     else { micNote.textContent=ui().micFail; micNote.style.display="block"; } }
-  if(settings.safety){ say(say0().load); showFlash(ui().flashLoad,"var(--amber)"); setPhase(ui().load,"var(--amber)"); drill.to=setTimeout(afterLoad,1500); }
+  if(settings.safety){ showFlash(ui().flashLoad,"var(--amber)"); setPhase(ui().load,"var(--amber)"); speakThen(say0().load, afterLoad); }
   else afterLoad();
 }
 function afterLoad(){ if(!drill.ex.timed)runPrecision(); else prepareSeries(0,true); }
@@ -608,14 +608,34 @@ function runPrecision(){ const ex=drill.ex; setPhase(ui().precision,"var(--green
   setCtrl([{label:ui().shotFired,cls:"primary",fn:()=>{ if(drill.shotsFired<ex.shots){drill.shotsFired++;tickBeep();updateCounts(); if(drill.shotsFired>=ex.shots&&!settings.listen)finishExercise();} }},
     {label:ui().finish,cls:"ghost",fn:finishExercise}]); }
 
+/* dit un texte, puis exécute cb une fois la voix terminée (+ tampon), avec filet de sécurité */
+function speakThen(text, cb){
+  if(drill&&drill.to)clearTimeout(drill.to);
+  let done=false;
+  const pause=550; // laisser un peu d'air après la fin de l'annonce
+  const fire=()=>{ if(done)return; done=true; if(drill&&drill.to)clearTimeout(drill.to); if(drill)cb(); };
+  if(settings.voice && ("speechSynthesis" in window) && text){
+    try{
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang=settings.lang==="fr"?"fr-FR":settings.lang==="de"?"de-CH":"en-GB";
+      const v=voices[settings.lang]; if(v)u.voice=v; u.rate=1; u.pitch=1;
+      u.onend=()=>setTimeout(fire,pause);
+      u.onerror=()=>setTimeout(fire,pause);
+      speechSynthesis.speak(u);
+      const est=Math.min(9000,Math.max(2600,text.length*95))+pause; // si onend ne se déclenche pas
+      if(drill) drill.to=setTimeout(fire,est);
+    }catch(e){ if(drill) drill.to=setTimeout(fire,1200); }
+  } else { if(drill) drill.to=setTimeout(fire,700); }   // voix désactivée : courte pause
+}
 function prepareSeries(segIndex,first){ const ex=drill.ex, s=ex.series[segIndex], L=say0();
-  drill.seg=segIndex; markPips(segIndex,true); say(L.series(segIndex+1,ex.series.length,s.shots,s.seconds));
+  drill.seg=segIndex; markPips(segIndex,true);
   if(settings.listen)updateCounts(); else shotCount.style.display="none";
   bigSub.textContent=ui().prepSub; setPhase(ui().getReady,"var(--amber)"); setRing(1,"var(--amber)");
   setCtrl([{label:ui().pause,cls:"ghost",disabled:true,fn:()=>{}}]);
   const prepSec=first?settings.prep:Math.min(settings.prep,4);
-  drill.to=setTimeout(()=>{ say(first?L.ready:L.attention);
-    startCountdown(prepSec,{colorScale:false,onTick:sh=>{bigTime.textContent=sh;if(sh<=3&&sh>0)tickBeep();},onDone:()=>fireSeries(segIndex)}); }, first?1500:950); }
+  speakThen(L.series(segIndex+1,ex.series.length,s.shots,s.seconds), ()=>{ say(first?L.ready:L.attention);
+    startCountdown(prepSec,{colorScale:false,onTick:sh=>{bigTime.textContent=sh;if(sh<=3&&sh>0)tickBeep();},onDone:()=>fireSeries(segIndex)}); }); }
 function fireSeries(segIndex){ const ex=drill.ex, s=ex.series[segIndex], L=say0();
   goBeep(); showFlash(ui().flashFire,"var(--green)"); say(L.fire); setPhase(ui().fireRun,"var(--red)"); bigSub.textContent=ui().remaining;
   let paused=false; const draw=()=>setCtrl([{label:paused?ui().resume:ui().pause,cls:"ghost",fn:()=>{paused=!paused;if(paused)pauseTimer();else resumeTimer();draw();}}]); draw();
